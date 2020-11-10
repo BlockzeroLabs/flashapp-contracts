@@ -111,7 +111,7 @@ contract Pool is PoolERC20, IPool {
         uint256 _amountALT,
         uint256 _amountFLASHMin,
         uint256 _amountALTMin
-    ) private returns (uint256 amountFLASH, uint256 amountALT) {
+    ) private view returns (uint256 amountFLASH, uint256 amountALT) {
         if (reserveAltAmount == 0 && reserveFlashAmount == 0) {
             (amountFLASH, amountALT) = (_amountFLASH, _amountALT);
         } else {
