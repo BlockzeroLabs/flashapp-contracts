@@ -1,17 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0
+
 pragma solidity ^0.6.8;
 
 import "../../libraries/SafeMath.sol";
 import "./PoolERC20.sol";
 import "../interfaces/IERC20.sol";
+import "../interfaces/IPool.sol";
 
 contract Pool is PoolERC20, IPool {
     using SafeMath for uint256;
 
     address
-        public constant FLASH_TOKEN = 0x706AEa632c07D34C9FF9EA419bf19c85dBA4Dcb8;
+        public constant FLASH_TOKEN = address(0);
     address public token;
     address public factory;
-    address public FLASH_PROTOCOL = 0x9B5C5499d22dCB7F4FEbEC4159349095D8E4156E;
+    address public FLASH_PROTOCOL = address(0);
     uint256 public reserveFlashAmount;
     uint256 public reserveAltAmount;
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
@@ -27,9 +30,8 @@ contract Pool is PoolERC20, IPool {
     }
 
 
-    function initialize(address _flashAddress, address _token) public {
+    function initialize(address _token) public override onlyFactory{
         require(msg.sender == factory);
-        FLASH_CONTRACT = _flashAddress;
         token = _token;
     }
 
@@ -63,7 +65,7 @@ contract Pool is PoolERC20, IPool {
         result = getAPYSwap(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveSwap(_amountIn, result);
-        IERC20(FLASH_CONTRACT).transfer(_staker, result);
+        IERC20(FLASH_TOKEN).transfer(_staker, result);
     }
 
     function stakeWithFeeRewardDistribution(
@@ -146,12 +148,12 @@ contract Pool is PoolERC20, IPool {
         uint256 _altAmount
     ) private returns (uint256 liquidity) {
         if (totalSupply == 0) {
-            liquidity = Math.sqrt(_flashAmount.mul(_altAmount)).sub(
+            liquidity = SafeMath.sqrt(_flashAmount.mul(_altAmount)).sub(
                 MINIMUM_LIQUIDITY
             );
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
-            liquidity = Math.min(
+            liquidity = SafeMath.min(
                 _flashAmount.mul(totalSupply) / reserveFlashAmount,
                 _altAmount.mul(totalSupply) / reserveAltAmount
             );
@@ -199,7 +201,7 @@ contract Pool is PoolERC20, IPool {
         internal
         returns (uint256 amountFLASH, uint256 amountALT)
     {
-        uint256 balanceFLASH = IERC20(FLASH_CONTRACT).balanceOf(address(this));
+        uint256 balanceFLASH = IERC20(FLASH_TOKEN).balanceOf(address(this));
         uint256 balanceALT = IERC20(token).balanceOf(address(this));
         uint256 liquidity = balanceOf[address(this)];
 
@@ -210,9 +212,9 @@ contract Pool is PoolERC20, IPool {
             "Pool:: INSUFFICIENT_LIQUIDITY_BURNED"
         );
         _burn(address(this), liquidity);
-        IERC20(FLASH_CONTRACT).transfer(to, amountFLASH);
+        IERC20(FLASH_TOKEN).transfer(to, amountFLASH);
         IERC20(token).transfer(to, amountALT);
-        balanceFLASH = balanceFLASH.sub(IERC20(FLASH_CONTRACT).balanceOf(address(this)));
+        balanceFLASH = balanceFLASH.sub(IERC20(FLASH_TOKEN).balanceOf(address(this)));
         balanceALT = balanceALT.sub(IERC20(token).balanceOf(address(this)));
 
         calcNewReserveRemoveLiquidity(balanceFLASH, balanceALT);

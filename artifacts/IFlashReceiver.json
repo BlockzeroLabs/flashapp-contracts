@@ -5,32 +5,32 @@
       "inputs": [
         {
           "internalType": "bytes32",
-          "name": "id",
+          "name": "_id",
           "type": "bytes32"
         },
         {
           "internalType": "uint256",
-          "name": "amountIn",
+          "name": "_amountIn",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "expireAfter",
+          "name": "_expireAfter",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "mintedAmount",
+          "name": "_mintedAmount",
           "type": "uint256"
         },
         {
           "internalType": "address",
-          "name": "staker",
+          "name": "_staker",
           "type": "address"
         },
         {
           "internalType": "bytes",
-          "name": "data",
+          "name": "_data",
           "type": "bytes"
         }
       ],

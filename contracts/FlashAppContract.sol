@@ -10,6 +10,7 @@ import "./libraries/Create2.sol";
 
 import "./pool/contracts/Pool.sol";
 import "./interfaces/IFlashReceiver.sol";
+import "./interfaces/IFlashProtocol.sol";
 
 import "./pool/interfaces/IERC20.sol";
 
@@ -17,9 +18,9 @@ contract FlashstakeProtocol is IFlashReceiver {
     using SafeMath for uint256;
 
     address
-        public constant FLASH_CONTRACT = 0x419ba4EE0152b2e8c00CDdC2c22cf5b86667F6b7;
+        public constant FLASH_TOKEN = address(0);
 
-    address public FLASH_PROTOCOL = 0x9B5C5499d22dCB7F4FEbEC4159349095D8E4156E;
+    address public FLASH_PROTOCOL = address(0);
 
     mapping(bytes32 => uint256) public stakerReward;
     mapping(address => address) public pools; //Token -> pools
@@ -74,18 +75,18 @@ contract FlashstakeProtocol is IFlashReceiver {
         bytes32 salt = keccak256(abi.encodePacked(block.timestamp, msg.sender));
         poolAddress = Create2.deploy(0, salt, bytecode);
         pools[_token] = poolAddress;
-        IPool(poolAddress).initialize(FLASH_CONTRACT, _token);
+        IPool(poolAddress).initialize(_token);
         emit PoolCreated(poolAddress, _token);
     }
 
     function receiveFlash(
         bytes32 _id,
-        uint256 _amountIn,
-        uint256 _expireAfter,
+        uint256 _amountIn, //unused
+        uint256 _expireAfter, //unused
         uint256 _mintedAmount,
-        address _staker,
+        address _staker, //unused
         bytes calldata _data
-    ) external onlyProtocol returns (uint256) {
+    ) external override onlyProtocol returns (uint256) {
         (address token, address staker, uint256 expectedOutput) = abi.decode(
             _data,
             (address, address, uint256)
@@ -94,7 +95,7 @@ contract FlashstakeProtocol is IFlashReceiver {
 
         IERC20(FLASH_TOKEN).transfer(pool, _mintedAmount);
 
-        reward = distributeStakeReward(_minted, pool, staker, _expectedOutput);
+        uint256 reward = distributeStakeReward(_mintedAmount, pool, staker, expectedOutput);
 
         stakerReward[_id] = reward;
 
@@ -121,8 +122,7 @@ contract FlashstakeProtocol is IFlashReceiver {
         withdrawAmount = 0;
         for (uint256 i = 0; i < _expiredIds.length; i = i.add(1)) {
             IFlashProtocol(FLASH_PROTOCOL).unstake(
-                _expiredIds[i],
-                stakerData[_expiredIds[i]].flashQuantity
+                _expiredIds[i]
             );
         }
     }
@@ -132,27 +132,30 @@ contract FlashstakeProtocol is IFlashReceiver {
         address _token,
         uint256 _expectedOutput
     ) public returns (uint256 result) {
+        address user = msg.sender;
+        address pool = pools[_token];
+
         require(_altQuantity > 0, "Flashapp_contract:: INVALID_AMOUNT");
         require(
             pools[_token] != address(0),
             "Flashapp_contract:: POOL_DOESNT_EXIST"
         );
 
-        IERC20(_token).transferFrom(msg.sender, address(this), _altQuantity);
-        IERC20(_token).transfer(pools[_token], _altQuantity);
+        IERC20(_token).transferFrom(user, address(this), _altQuantity);
+        IERC20(_token).transfer(pool, _altQuantity);
 
-        result = IPool(pools[_token]).swapWithFeeRewardDistribution(
+        result = IPool(pool).swapWithFeeRewardDistribution(
             _altQuantity,
-            msg.sender,
+            user,
             _expectedOutput
         );
 
         emit Swapped(
-            msg.sender,
+            user,
             _altQuantity,
             result,
             block.timestamp,
-            pools[_token]
+            pool
         );
     }
 
@@ -182,13 +185,13 @@ contract FlashstakeProtocol is IFlashReceiver {
             maker
         );
 
-        IERC20(FLASH_CONTRACT).transferFrom(maker, address(this), amountFLASH);
-        IERC20(FLASH_CONTRACT).transfer(pool, amountFLASH);
+        IERC20(FLASH_TOKEN).transferFrom(maker, address(this), amountFLASH);
+        IERC20(FLASH_TOKEN).transfer(pool, amountFLASH);
         IERC20(_token).transferFrom(maker, address(this), amountALT);
         IERC20(_token).transfer(pool, amountALT);
 
         emit LiquidityAdded(
-            pools,
+            pool,
             _token,
             amountFLASH,
             amountALT,
@@ -204,11 +207,11 @@ contract FlashstakeProtocol is IFlashReceiver {
 
         IERC20(pool).transferFrom(msg.sender, pool, _liquidity);
 
-        (uint256 amountFLASH, uint256 amountALT) = IPool(pools[_token])
-            .removeLiquidity(_liquidity, msg.sender);
+        (uint256 amountFLASH, uint256 amountALT) = IPool(pool)
+            .removeLiquidity( msg.sender);
 
         emit LiquidityRemoved(
-            pools[_token],
+            pool,
             _token,
             amountFLASH,
             amountALT,

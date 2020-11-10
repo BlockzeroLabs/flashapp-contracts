@@ -112,7 +112,7 @@ contract PoolERC20 is IERC20 {
         return keccak256(abi.encode(EIP712DOMAIN_HASH, NAME_HASH, VERSION_HASH, getChainId(), address(this)));
     }
 
-    function burn(uint256 value) external returns (bool) {
+    function burn(uint256 value) external override returns (bool) {
         _burn(msg.sender, value);
         return true;
     }

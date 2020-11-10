@@ -2,7 +2,7 @@
 pragma solidity ^0.6.8;
 
 interface IPool {
-    function initialize(address _xioAddress, address _token) external;
+    function initialize(address _token) external;
 
     function stakeWithFeeRewardDistribution(
         uint256 _amountIn,
@@ -11,9 +11,9 @@ interface IPool {
     ) external returns (uint256 result);
 
     function addLiquidity(
-        uint256 _amountXIO,
+        uint256 _amountFLASH,
         uint256 _amountALT,
-        uint256 _amountXIOMin,
+        uint256 _amountFLASHMin,
         uint256 _amountALTMin,
         address _maker
     )
@@ -24,7 +24,7 @@ interface IPool {
             uint256
         );
 
-    function removeLiquidity(uint256 liquidity,address _maker) external returns (uint256, uint256);
+    function removeLiquidity(address _maker) external returns (uint256, uint256);
 
     function swapWithFeeRewardDistribution(
         uint256 _amountIn,
