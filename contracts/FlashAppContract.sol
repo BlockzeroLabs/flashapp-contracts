@@ -17,8 +17,7 @@ import "./pool/interfaces/IERC20.sol";
 contract FlashstakeProtocol is IFlashReceiver {
     using SafeMath for uint256;
 
-    address
-        public constant FLASH_TOKEN = address(0);
+    address public constant FLASH_TOKEN = address(0);
 
     address public FLASH_PROTOCOL = address(0);
 
@@ -95,24 +94,15 @@ contract FlashstakeProtocol is IFlashReceiver {
 
         IERC20(FLASH_TOKEN).transfer(pool, _mintedAmount);
 
-        uint256 reward = distributeStakeReward(_mintedAmount, pool, staker, expectedOutput);
+        uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(
+            _mintedAmount,
+            staker,
+            expectedOutput
+        );
 
         stakerReward[_id] = reward;
 
         emit Staked(_id, reward);
-    }
-
-    function distributeStakeReward(
-        uint256 _flashQuantity,
-        address _pool,
-        address _staker,
-        uint256 _expectedOutput
-    ) internal returns (uint256 result) {
-        result = IPool(_pool).stakeWithFeeRewardDistribution(
-            _flashQuantity,
-            _staker,
-            _expectedOutput
-        );
     }
 
     function unstake(bytes32[] memory _expiredIds)
@@ -121,9 +111,7 @@ contract FlashstakeProtocol is IFlashReceiver {
     {
         withdrawAmount = 0;
         for (uint256 i = 0; i < _expiredIds.length; i = i.add(1)) {
-            IFlashProtocol(FLASH_PROTOCOL).unstake(
-                _expiredIds[i]
-            );
+            IFlashProtocol(FLASH_PROTOCOL).unstake(_expiredIds[i]);
         }
     }
 
@@ -150,13 +138,7 @@ contract FlashstakeProtocol is IFlashReceiver {
             _expectedOutput
         );
 
-        emit Swapped(
-            user,
-            _altQuantity,
-            result,
-            block.timestamp,
-            pool
-        );
+        emit Swapped(user, _altQuantity, result, block.timestamp, pool);
     }
 
     function addLiquidityInPool(
@@ -207,8 +189,9 @@ contract FlashstakeProtocol is IFlashReceiver {
 
         IERC20(pool).transferFrom(msg.sender, pool, _liquidity);
 
-        (uint256 amountFLASH, uint256 amountALT) = IPool(pool)
-            .removeLiquidity( msg.sender);
+        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(
+            msg.sender
+        );
 
         emit LiquidityRemoved(
             pool,
