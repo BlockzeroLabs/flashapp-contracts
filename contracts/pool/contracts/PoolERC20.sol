@@ -2,8 +2,7 @@
 pragma solidity 0.6.12;
 
 import "../../libraries/SafeMath.sol";
-
-import "../interfaces/IERC20.sol";
+import "../../interfaces/IERC20.sol";
 
 // Lightweight token modelled after UNI-LP:
 // https://github.com/Uniswap/uniswap-v2-core/blob/v1.0.1/contracts/UniswapV2ERC20.sol
@@ -20,8 +19,8 @@ contract PoolERC20 is IERC20 {
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 private constant EIP712DOMAIN_HASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
-    // bytes32 private constant NAME_HASH = keccak256("FLASH")
-    bytes32 private constant NAME_HASH = 0x345b72c36b14f1cee01efb8ac4b299dc7b8d873e28b4796034548a3d371a4d2f;
+    // bytes32 private constant NAME_HASH = keccak256("xFLASH")
+    bytes32 private constant NAME_HASH = 0x845ffb154f63a545a2099447b72e83c7a794924564d3a0685a09f86e427617fb;
 
     // bytes32 private constant VERSION_HASH = keccak256("1")
     bytes32 private constant VERSION_HASH = 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6;
@@ -32,7 +31,8 @@ contract PoolERC20 is IERC20 {
 
     // bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH =
     // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)");
-    bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
+    bytes32
+        public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
 
     string public constant name = "xFlash Token";
     string public constant symbol = "xFLASH";
@@ -132,7 +132,7 @@ contract PoolERC20 is IERC20 {
         address to,
         uint256 value
     ) external override returns (bool) {
-        uint256 fromAllowance = allowance[from][msg.sender]; //didn't understand this logic. 
+        uint256 fromAllowance = allowance[from][msg.sender]; //didn't understand this logic.
         if (fromAllowance != uint256(-1)) {
             // Allowance is implicitly checked with SafeMath's underflow protection
             allowance[from][msg.sender] = fromAllowance.sub(value);
@@ -174,7 +174,9 @@ contract PoolERC20 is IERC20 {
         require(block.timestamp < validBefore, "xFlashToken:: AUTH_EXPIRED");
         require(!authorizationState[from][nonce], "xFlashToken:: AUTH_ALREADY_USED");
 
-        bytes32 encodeData = keccak256(abi.encode(TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce));
+        bytes32 encodeData = keccak256(
+            abi.encode(TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce)
+        );
         _validateSignedData(from, encodeData, v, r, s);
 
         authorizationState[from][nonce] = true;
