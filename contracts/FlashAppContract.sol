@@ -74,7 +74,7 @@ contract FlashstakeProtocol is IFlashReceiver {
         uint256 _amountIn, //unused
         uint256 _expireAfter, //unused
         uint256 _mintedAmount,
-        address _staker, //unused
+        address _staker,
         bytes calldata _data
     ) external override onlyProtocol returns (uint256) {
         (address token, uint256 expectedOutput) = abi.decode(_data, (address, uint256));
