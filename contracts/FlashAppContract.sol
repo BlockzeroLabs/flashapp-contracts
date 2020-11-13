@@ -77,10 +77,10 @@ contract FlashstakeProtocol is IFlashReceiver {
         address _staker, //unused
         bytes calldata _data
     ) external override onlyProtocol returns (uint256) {
-        (address token, address staker, uint256 expectedOutput) = abi.decode(_data, (address, address, uint256));
+        (address token, uint256 expectedOutput) = abi.decode(_data, (address, uint256));
         address pool = pools[token];
         IERC20(FLASH_TOKEN).transfer(pool, _mintedAmount);
-        uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(_mintedAmount, staker, expectedOutput);
+        uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(_mintedAmount, _staker, expectedOutput);
         stakerReward[_id] = reward;
         emit Staked(_id, reward);
     }
