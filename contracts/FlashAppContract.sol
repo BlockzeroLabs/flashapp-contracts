@@ -85,9 +85,7 @@ contract FlashstakeProtocol is IFlashReceiver {
         emit Staked(_id, reward);
     }
 
-    // TODO: fix this, currently withdrawAmount is not used
-    function unstake(bytes32[] memory _expiredIds) public returns (uint256 withdrawAmount) {
-        withdrawAmount = 0;
+    function unstake(bytes32[] memory _expiredIds) public {
         for (uint256 i = 0; i < _expiredIds.length; i = i.add(1)) {
             IFlashProtocol(FLASH_PROTOCOL).unstake(_expiredIds[i]);
         }
