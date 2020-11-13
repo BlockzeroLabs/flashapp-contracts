@@ -1,30 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.6.12;
 
+import "./interfaces/IERC20.sol";
 import "./interfaces/IFlashReceiver.sol";
-
-import "./libraries/SafeMath.sol";
-import "./libraries/Address.sol";
-
-import "./libraries/Create2.sol";
-
-import "./pool/contracts/Pool.sol";
 import "./interfaces/IFlashReceiver.sol";
 import "./interfaces/IFlashProtocol.sol";
 
-import "./pool/interfaces/IERC20.sol";
+import "./libraries/SafeMath.sol";
+import "./libraries/Address.sol";
+import "./libraries/Create2.sol";
+
+import "./pool/contracts/Pool.sol";
 
 contract FlashstakeProtocol is IFlashReceiver {
     using SafeMath for uint256;
 
     address public constant FLASH_TOKEN = address(0);
-
-    address public FLASH_PROTOCOL = address(0);
+    address public constant FLASH_PROTOCOL = address(0);
 
     mapping(bytes32 => uint256) public stakerReward;
-    mapping(address => address) public pools; //Token -> pools
+    mapping(address => address) public pools; // token -> pools
 
     event PoolCreated(address _pool, address _token);
+
+    event Staked(bytes32 _id, uint256 _rewardAmount);
 
     event LiquidityAdded(
         address _pool,
@@ -46,8 +45,6 @@ contract FlashstakeProtocol is IFlashReceiver {
         address _sender
     );
 
-    event Staked(bytes32 _id, uint256 _rewardAmount);
-
     event Swapped(
         address _sender,
         uint256 _swapAmount,
@@ -57,19 +54,13 @@ contract FlashstakeProtocol is IFlashReceiver {
     );
 
     modifier onlyProtocol() {
-        require(msg.sender == FLASH_PROTOCOL);
+        require(msg.sender == FLASH_PROTOCOL, "FlashApp:: ONLY_PROTOCOL");
         _;
     }
 
     function createPool(address _token) external returns (address poolAddress) {
-        require(
-            _token != address(0),
-            "Flashapp_contract:: INVALID_TOKEN_ADDRESS"
-        );
-        require(
-            pools[_token] == address(0),
-            "PFlashapp_contract:: POOL_ALREADY_EXISTS"
-        );
+        require(_token != address(0), "FlashApp:: INVALID_TOKEN_ADDRESS");
+        require(pools[_token] == address(0), "FlashApp:: POOL_ALREADY_EXISTS");
         bytes memory bytecode = type(Pool).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(block.timestamp, msg.sender));
         poolAddress = Create2.deploy(0, salt, bytecode);
@@ -86,29 +77,16 @@ contract FlashstakeProtocol is IFlashReceiver {
         address _staker, //unused
         bytes calldata _data
     ) external override onlyProtocol returns (uint256) {
-        (address token, address staker, uint256 expectedOutput) = abi.decode(
-            _data,
-            (address, address, uint256)
-        );
+        (address token, address staker, uint256 expectedOutput) = abi.decode(_data, (address, address, uint256));
         address pool = pools[token];
-
         IERC20(FLASH_TOKEN).transfer(pool, _mintedAmount);
-
-        uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(
-            _mintedAmount,
-            staker,
-            expectedOutput
-        );
-
+        uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(_mintedAmount, staker, expectedOutput);
         stakerReward[_id] = reward;
-
         emit Staked(_id, reward);
     }
 
-    function unstake(bytes32[] memory _expiredIds)
-        public
-        returns (uint256 withdrawAmount)
-    {
+    // TODO: fix this, currently withdrawAmount is not used
+    function unstake(bytes32[] memory _expiredIds) public returns (uint256 withdrawAmount) {
         withdrawAmount = 0;
         for (uint256 i = 0; i < _expiredIds.length; i = i.add(1)) {
             IFlashProtocol(FLASH_PROTOCOL).unstake(_expiredIds[i]);
@@ -123,20 +101,13 @@ contract FlashstakeProtocol is IFlashReceiver {
         address user = msg.sender;
         address pool = pools[_token];
 
-        require(_altQuantity > 0, "Flashapp_contract:: INVALID_AMOUNT");
-        require(
-            pools[_token] != address(0),
-            "Flashapp_contract:: POOL_DOESNT_EXIST"
-        );
+        require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
+        require(_altQuantity > 0, "FlashApp:: INVALID_AMOUNT");
 
         IERC20(_token).transferFrom(user, address(this), _altQuantity);
         IERC20(_token).transfer(pool, _altQuantity);
 
-        result = IPool(pool).swapWithFeeRewardDistribution(
-            _altQuantity,
-            user,
-            _expectedOutput
-        );
+        result = IPool(pool).swapWithFeeRewardDistribution(_altQuantity, user, _expectedOutput);
 
         emit Swapped(user, _altQuantity, result, block.timestamp, pool);
     }
@@ -148,18 +119,13 @@ contract FlashstakeProtocol is IFlashReceiver {
         uint256 _amountALTMin,
         address _token
     ) public {
-        address pool = pools[_token];
         address maker = msg.sender;
-        require(pool != address(0), "Flashapp_contract:: POOL_DOESNT_EXIST");
-        require(
-            _amountFLASH > 0 && _amountALT > 0,
-            "Flashapp_contract:: INVALID_AMOUNT"
-        );
+        address pool = pools[_token];
 
-        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) = IPool(
-            pool
-        )
-            .addLiquidity(
+        require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
+        require(_amountFLASH > 0 && _amountALT > 0, "FlashApp:: INVALID_AMOUNT");
+
+        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) = IPool(pool).addLiquidity(
             _amountFLASH,
             _amountALT,
             _amountFLASHMin,
@@ -172,35 +138,18 @@ contract FlashstakeProtocol is IFlashReceiver {
         IERC20(_token).transferFrom(maker, address(this), amountALT);
         IERC20(_token).transfer(pool, amountALT);
 
-        emit LiquidityAdded(
-            pool,
-            _token,
-            amountFLASH,
-            amountALT,
-            liquidity,
-            block.timestamp,
-            maker
-        );
+        emit LiquidityAdded(pool, _token, amountFLASH, amountALT, liquidity, block.timestamp, maker);
     }
 
     function removeLiquidityInPool(uint256 _liquidity, address _token) public {
         address pool = pools[_token];
-        require(pool != address(0), "Flashapp_contract:: POOL_DOESNT_EXIST");
+
+        require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
 
         IERC20(pool).transferFrom(msg.sender, pool, _liquidity);
 
-        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(
-            msg.sender
-        );
+        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(msg.sender);
 
-        emit LiquidityRemoved(
-            pool,
-            _token,
-            amountFLASH,
-            amountALT,
-            _liquidity,
-            block.timestamp,
-            msg.sender
-        );
+        emit LiquidityRemoved(pool, _token, amountFLASH, amountALT, _liquidity, block.timestamp, msg.sender);
     }
 }
