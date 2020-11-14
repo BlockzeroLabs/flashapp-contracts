@@ -50,7 +50,7 @@ contract FlashstakeProtocol is IFlashReceiver {
         uint256 _swapAmount,
         uint256 _flashReceived,
         uint256 _initiationTimestamp,
-        address _pair
+        address _pool
     );
 
     modifier onlyProtocol() {
