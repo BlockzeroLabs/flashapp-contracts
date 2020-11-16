@@ -4,6 +4,7 @@ pragma solidity 0.6.12;
 import "../../libraries/SafeMath.sol";
 
 import "../../interfaces/IERC20.sol";
+import "../../interfaces/IFlashProtocol.sol";
 import "../interfaces/IPool.sol";
 
 import "./PoolERC20.sol";
@@ -13,6 +14,7 @@ contract Pool is PoolERC20, IPool {
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
     address public constant FLASH_TOKEN = 0x91D7d7Ef396e56535040676C2BB67e50D4330FaF;
+    address public constant FLASH_PROTOCOL = 0xd1D51dC1123eCa18713aFE4C2B845dde58000c32;
 
     uint256 public reserveFlashAmount;
     uint256 public reserveAltAmount;
@@ -86,17 +88,26 @@ contract Pool is PoolERC20, IPool {
     }
 
     function getAPYStake(uint256 _amountIn) public view returns (uint256 result) {
-        uint256 amountInWithFee = _amountIn.mul(900);
+        uint256 amountInWithFee = _amountIn.mul(getLPFee());
         uint256 num = amountInWithFee.mul(reserveAltAmount);
         uint256 den = (reserveFlashAmount.mul(1000)).add(amountInWithFee);
         result = num.div(den);
     }
 
     function getAPYSwap(uint256 _amountIn) public view returns (uint256 result) {
-        uint256 amountInWithFee = _amountIn.mul(900);
+        uint256 amountInWithFee = _amountIn.mul(getLPFee());
         uint256 num = amountInWithFee.mul(reserveFlashAmount);
         uint256 den = (reserveAltAmount.mul(1000)).add(amountInWithFee);
         result = num.div(den);
+    }
+
+    function getLPFee()
+        public
+        view
+        returns (uint256)
+    {
+        uint256 fpy = IFlashProtocol(FLASH_PROTOCOL).getFPY(0);
+        return 1000-(fpy/5e15);
     }
 
     function quote(
