@@ -31,7 +31,6 @@ contract FlashstakeApp is IFlashReceiver {
         uint256 _amountFLASH,
         uint256 _amountALT,
         uint256 _liquidity,
-        uint256 _initiationTimestamp,
         address _sender
     );
 
@@ -41,7 +40,6 @@ contract FlashstakeApp is IFlashReceiver {
         uint256 _amountFLASH,
         uint256 _amountALT,
         uint256 _liquidity,
-        uint256 _initiationTimestamp,
         address _sender
     );
 
@@ -49,7 +47,6 @@ contract FlashstakeApp is IFlashReceiver {
         address _sender,
         uint256 _swapAmount,
         uint256 _flashReceived,
-        uint256 _initiationTimestamp,
         address _pool
     );
 
@@ -107,7 +104,7 @@ contract FlashstakeApp is IFlashReceiver {
 
         result = IPool(pool).swapWithFeeRewardDistribution(_altQuantity, user, _expectedOutput);
 
-        emit Swapped(user, _altQuantity, result, block.timestamp, pool);
+        emit Swapped(user, _altQuantity, result, pool);
     }
 
     function addLiquidityInPool(
@@ -136,18 +133,21 @@ contract FlashstakeApp is IFlashReceiver {
         IERC20(_token).transferFrom(maker, address(this), amountALT);
         IERC20(_token).transfer(pool, amountALT);
 
-        emit LiquidityAdded(pool, _token, amountFLASH, amountALT, liquidity, block.timestamp, maker);
+        emit LiquidityAdded(pool, _token, amountFLASH, amountALT, liquidity, maker);
     }
 
     function removeLiquidityInPool(uint256 _liquidity, address _token) public {
+        address maker = msg.sender;
+
         address pool = pools[_token];
 
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
 
-        IERC20(pool).transferFrom(msg.sender, pool, _liquidity);
+        IERC20(pool).transferFrom(maker, address(this), _liquidity);
+        IERC20(pool).transfer(pool,_liquidity);
+        
+        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
-        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(msg.sender);
-
-        emit LiquidityRemoved(pool, _token, amountFLASH, amountALT, _liquidity, block.timestamp, msg.sender);
+        emit LiquidityRemoved(pool, _token, amountFLASH, amountALT, _liquidity, maker);
     }
 }
