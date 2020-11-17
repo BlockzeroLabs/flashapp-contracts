@@ -13,8 +13,8 @@ contract Pool is PoolERC20, IPool {
     using SafeMath for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
-    address public constant FLASH_TOKEN = 0x91D7d7Ef396e56535040676C2BB67e50D4330FaF;
-    address public constant FLASH_PROTOCOL = 0xd1D51dC1123eCa18713aFE4C2B845dde58000c32;
+    address public constant FLASH_TOKEN = 0x91e0cDa1A8A114a6f92551B63Fc8b37645a08390;
+    address public constant FLASH_PROTOCOL = 0xaB65a3DFD979C140F17b198Ef33c917173d1ce1F;
 
     uint256 public reserveFlashAmount;
     uint256 public reserveAltAmount;
