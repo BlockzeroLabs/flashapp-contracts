@@ -12,7 +12,7 @@ import "./libraries/Create2.sol";
 
 import "./pool/contracts/Pool.sol";
 
-contract FlashstakeApp is IFlashReceiver {
+contract FlashApp is IFlashReceiver {
     using SafeMath for uint256;
 
     address public constant FLASH_TOKEN = 0x91D7d7Ef396e56535040676C2BB67e50D4330FaF;
