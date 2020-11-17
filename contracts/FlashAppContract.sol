@@ -23,11 +23,10 @@ contract FlashstakeApp is IFlashReceiver {
 
     event PoolCreated(address _pool, address _token);
 
-    event Staked(bytes32 _id, uint256 _rewardAmount);
+    event Staked(bytes32 _id, uint256 _rewardAmount, address _pool);
 
     event LiquidityAdded(
         address _pool,
-        address _token,
         uint256 _amountFLASH,
         uint256 _amountALT,
         uint256 _liquidity,
@@ -36,7 +35,6 @@ contract FlashstakeApp is IFlashReceiver {
 
     event LiquidityRemoved(
         address _pool,
-        address _token,
         uint256 _amountFLASH,
         uint256 _amountALT,
         uint256 _liquidity,
@@ -79,7 +77,7 @@ contract FlashstakeApp is IFlashReceiver {
         IERC20(FLASH_TOKEN).transfer(pool, _mintedAmount);
         uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(_mintedAmount, _staker, expectedOutput);
         stakerReward[_id] = reward;
-        emit Staked(_id, reward);
+        emit Staked(_id, reward, pool);
     }
 
     function unstake(bytes32[] memory _expiredIds) public {
@@ -133,7 +131,7 @@ contract FlashstakeApp is IFlashReceiver {
         IERC20(_token).transferFrom(maker, address(this), amountALT);
         IERC20(_token).transfer(pool, amountALT);
 
-        emit LiquidityAdded(pool, _token, amountFLASH, amountALT, liquidity, maker);
+        emit LiquidityAdded(pool, amountFLASH, amountALT, liquidity, maker);
     }
 
     function removeLiquidityInPool(uint256 _liquidity, address _token) public {
@@ -148,6 +146,6 @@ contract FlashstakeApp is IFlashReceiver {
         
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
-        emit LiquidityRemoved(pool, _token, amountFLASH, amountALT, _liquidity, maker);
+        emit LiquidityRemoved(pool, amountFLASH, amountALT, _liquidity, maker);
     }
 }
