@@ -35,9 +35,9 @@ contract Pool is PoolERC20, IPool {
     function _safeTransfer(
         address _token,
         address _to,
-        uint256 value
+        uint256 _value
     ) private {
-        (bool success, bytes memory data) = _token.call(abi.encodeWithSelector(TRANSFER_SELECTOR, _to, value));
+        (bool success, bytes memory data) = _token.call(abi.encodeWithSelector(TRANSFER_SELECTOR, _to, _value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), "Pool:: TRANSFER_FAILED");
     }
 
