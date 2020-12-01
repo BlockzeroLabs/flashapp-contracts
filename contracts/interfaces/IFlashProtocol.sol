@@ -15,9 +15,7 @@ interface IFlashProtocol {
             bytes32 id
         );
 
-    function unstake(bytes32 _id)
-        external
-        returns (uint256 withdrawAmount);
+    function unstake(bytes32 _id) external returns (uint256 withdrawAmount);
 
     function getFPY(uint256 _amountIn) external view returns (uint256);
 }
