@@ -113,7 +113,7 @@ contract Pool is PoolERC20, IPool {
 
     function getLPFee() public view returns (uint256) {
         uint256 fpy = IFlashProtocol(FLASH_PROTOCOL).getFPY(0);
-        return 1000 - (fpy / 5e15);
+        return uint256(1000).sub(fpy.div(5e15));
     }
 
     function quote(
