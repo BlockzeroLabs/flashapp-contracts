@@ -19,9 +19,17 @@ contract Pool is PoolERC20, IPool {
 
     uint256 public reserveFlashAmount;
     uint256 public reserveAltAmount;
+    uint256 private unlocked = 1;
 
     address public token;
     address public factory;
+
+    modifier lock() {
+        require(unlocked == 1, "Pool: LOCKED");
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
 
     modifier onlyFactory() {
         require(msg.sender == factory, "Pool:: ONLY_FACTORY");
@@ -49,7 +57,7 @@ contract Pool is PoolERC20, IPool {
         uint256 _amountIn,
         address _staker,
         uint256 _expectedOutput
-    ) public override onlyFactory returns (uint256 result) {
+    ) public override lock onlyFactory returns (uint256 result) {
         result = getAPYSwap(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveSwap(_amountIn, result);
@@ -60,7 +68,7 @@ contract Pool is PoolERC20, IPool {
         uint256 _amountIn,
         address _staker,
         uint256 _expectedOutput
-    ) public override onlyFactory returns (uint256 result) {
+    ) public override lock onlyFactory returns (uint256 result) {
         result = getAPYStake(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveStake(_amountIn, result);
@@ -126,7 +134,7 @@ contract Pool is PoolERC20, IPool {
         amountB = _amountA.mul(_reserveB).div(_reserveA);
     }
 
-    function burn(address to) private returns (uint256 amountFLASH, uint256 amountALT) {
+    function burn(address to) private lock returns (uint256 amountFLASH, uint256 amountALT) {
         uint256 balanceFLASH = IERC20(FLASH_TOKEN).balanceOf(address(this));
         uint256 balanceALT = IERC20(token).balanceOf(address(this));
         uint256 liquidity = balanceOf[address(this)];
