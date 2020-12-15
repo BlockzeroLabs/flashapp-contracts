@@ -13,14 +13,23 @@ contract Pool is PoolERC20, IPool {
     using SafeMath for uint256;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
+    bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
     address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
     address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
 
     uint256 public reserveFlashAmount;
     uint256 public reserveAltAmount;
+    uint256 private unlocked = 1;
 
     address public token;
     address public factory;
+
+    modifier lock() {
+        require(unlocked == 1, "Pool: LOCKED");
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
 
     modifier onlyFactory() {
         require(msg.sender == factory, "Pool:: ONLY_FACTORY");
@@ -31,6 +40,15 @@ contract Pool is PoolERC20, IPool {
         factory = msg.sender;
     }
 
+    function _safeTransfer(
+        address _token,
+        address _to,
+        uint256 _value
+    ) private {
+        (bool success, bytes memory data) = _token.call(abi.encodeWithSelector(TRANSFER_SELECTOR, _to, _value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "Pool:: TRANSFER_FAILED");
+    }
+
     function initialize(address _token) public override onlyFactory {
         token = _token;
     }
@@ -39,22 +57,22 @@ contract Pool is PoolERC20, IPool {
         uint256 _amountIn,
         address _staker,
         uint256 _expectedOutput
-    ) public override onlyFactory returns (uint256 result) {
+    ) public override lock onlyFactory returns (uint256 result) {
         result = getAPYSwap(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveSwap(_amountIn, result);
-        IERC20(FLASH_TOKEN).transfer(_staker, result);
+        _safeTransfer(FLASH_TOKEN, _staker, result);
     }
 
     function stakeWithFeeRewardDistribution(
         uint256 _amountIn,
         address _staker,
         uint256 _expectedOutput
-    ) public override onlyFactory returns (uint256 result) {
+    ) public override lock onlyFactory returns (uint256 result) {
         result = getAPYStake(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveStake(_amountIn, result);
-        IERC20(token).transfer(_staker, result);
+        _safeTransfer(token, _staker, result);
     }
 
     function addLiquidity(
@@ -101,13 +119,9 @@ contract Pool is PoolERC20, IPool {
         result = num.div(den);
     }
 
-    function getLPFee()
-        public
-        view
-        returns (uint256)
-    {
+    function getLPFee() public view returns (uint256) {
         uint256 fpy = IFlashProtocol(FLASH_PROTOCOL).getFPY(0);
-        return 1000-(fpy/5e15);
+        return uint256(1000).sub(fpy.div(5e15));
     }
 
     function quote(
@@ -120,7 +134,7 @@ contract Pool is PoolERC20, IPool {
         amountB = _amountA.mul(_reserveB).div(_reserveA);
     }
 
-    function burn(address to) private returns (uint256 amountFLASH, uint256 amountALT) {
+    function burn(address to) private lock returns (uint256 amountFLASH, uint256 amountALT) {
         uint256 balanceFLASH = IERC20(FLASH_TOKEN).balanceOf(address(this));
         uint256 balanceALT = IERC20(token).balanceOf(address(this));
         uint256 liquidity = balanceOf[address(this)];
@@ -132,8 +146,8 @@ contract Pool is PoolERC20, IPool {
 
         _burn(address(this), liquidity);
 
-        IERC20(FLASH_TOKEN).transfer(to, amountFLASH);
-        IERC20(token).transfer(to, amountALT);
+        _safeTransfer(FLASH_TOKEN, to, amountFLASH);
+        _safeTransfer(token, to, amountALT);
 
         balanceFLASH = balanceFLASH.sub(IERC20(FLASH_TOKEN).balanceOf(address(this)));
         balanceALT = balanceALT.sub(IERC20(token).balanceOf(address(this)));
