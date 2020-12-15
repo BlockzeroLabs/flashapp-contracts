@@ -20,7 +20,7 @@ contract PoolERC20 is IERC20 {
     bytes32 private constant EIP712DOMAIN_HASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
     // bytes32 private constant NAME_HASH = keccak256("xFLASH")
-    bytes32 private constant NAME_HASH = 0x845ffb154f63a545a2099447b72e83c7a794924564d3a0685a09f86e427617fb;
+    bytes32 private constant NAME_HASH = 0xd1bc94b8dbef67492f84dfb0215d51bd6a08dc0e38a29061270f8f139b9d96b3;
 
     // bytes32 private constant VERSION_HASH = keccak256("1")
     bytes32 private constant VERSION_HASH = 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6;
@@ -34,8 +34,8 @@ contract PoolERC20 is IERC20 {
     bytes32
         public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
 
-    string public constant name = "xFlash Token";
-    string public constant symbol = "xFLASH";
+    string public constant name = "xALT Token";
+    string public constant symbol = "xALT";
     uint8 public constant decimals = 18;
 
     uint256 public override totalSupply;
@@ -63,7 +63,7 @@ contract PoolERC20 is IERC20 {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), encodeData));
         address recoveredAddress = ecrecover(digest, v, r, s);
         // Explicitly disallow authorizations for address(0) as ecrecover returns address(0) on malformed messages
-        require(recoveredAddress != address(0) && recoveredAddress == signer, "xFlashToken:: INVALID_SIGNATURE");
+        require(recoveredAddress != address(0) && recoveredAddress == signer, "xALTToken:: INVALID_SIGNATURE");
     }
 
     function _mint(address to, uint256 value) internal {
@@ -93,7 +93,7 @@ contract PoolERC20 is IERC20 {
         address to,
         uint256 value
     ) private {
-        require(to != address(0), "xFlashToken:: RECEIVER_IS_TOKEN_OR_ZERO");
+        require(to != address(0), "xALTToken:: RECEIVER_IS_TOKEN_OR_ZERO");
         // Balance is implicitly checked with SafeMath's underflow protection
         balanceOf[from] = balanceOf[from].sub(value);
         balanceOf[to] = balanceOf[to].add(value);
@@ -149,7 +149,7 @@ contract PoolERC20 is IERC20 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(deadline >= block.timestamp, "xFlashToken:: AUTH_EXPIRED");
+        require(deadline >= block.timestamp, "xALTToken:: AUTH_EXPIRED");
 
         bytes32 encodeData = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner], deadline));
         nonces[owner] = nonces[owner].add(1);
@@ -169,9 +169,9 @@ contract PoolERC20 is IERC20 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(block.timestamp > validAfter, "xFlashToken:: AUTH_NOT_YET_VALID");
-        require(block.timestamp < validBefore, "xFlashToken:: AUTH_EXPIRED");
-        require(!authorizationState[from][nonce], "xFlashToken:: AUTH_ALREADY_USED");
+        require(block.timestamp > validAfter, "xALTToken:: AUTH_NOT_YET_VALID");
+        require(block.timestamp < validBefore, "xALTToken:: AUTH_EXPIRED");
+        require(!authorizationState[from][nonce], "xALTToken:: AUTH_ALREADY_USED");
 
         bytes32 encodeData = keccak256(
             abi.encode(TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce)
