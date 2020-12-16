@@ -15,8 +15,8 @@ import "./pool/contracts/Pool.sol";
 contract FlashApp is IFlashReceiver {
     using SafeMath for uint256;
 
-    address public constant FLASH_TOKEN = 0x91e0cDa1A8A114a6f92551B63Fc8b37645a08390;
-    address public constant FLASH_PROTOCOL = 0xaB65a3DFD979C140F17b198Ef33c917173d1ce1F;
+    address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
+    address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
 
     mapping(bytes32 => uint256) public stakerReward;
     mapping(address => address) public pools; // token -> pools
@@ -25,13 +25,7 @@ contract FlashApp is IFlashReceiver {
 
     event Staked(bytes32 _id, uint256 _rewardAmount, address _pool);
 
-    event LiquidityAdded(
-        address _pool,
-        uint256 _amountFLASH,
-        uint256 _amountALT,
-        uint256 _liquidity,
-        address _sender
-    );
+    event LiquidityAdded(address _pool, uint256 _amountFLASH, uint256 _amountALT, uint256 _liquidity, address _sender);
 
     event LiquidityRemoved(
         address _pool,
@@ -41,12 +35,7 @@ contract FlashApp is IFlashReceiver {
         address _sender
     );
 
-    event Swapped(
-        address _sender,
-        uint256 _swapAmount,
-        uint256 _flashReceived,
-        address _pool
-    );
+    event Swapped(address _sender, uint256 _swapAmount, uint256 _flashReceived, address _pool);
 
     modifier onlyProtocol() {
         require(msg.sender == FLASH_PROTOCOL, "FlashApp:: ONLY_PROTOCOL");
@@ -142,8 +131,8 @@ contract FlashApp is IFlashReceiver {
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
 
         IERC20(pool).transferFrom(maker, address(this), _liquidity);
-        IERC20(pool).transfer(pool,_liquidity);
-        
+        IERC20(pool).transfer(pool, _liquidity);
+
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
         emit LiquidityRemoved(pool, amountFLASH, amountALT, _liquidity, maker);

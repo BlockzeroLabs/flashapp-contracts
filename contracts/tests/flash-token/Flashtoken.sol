@@ -4,6 +4,8 @@ pragma solidity 0.6.12;
 import "../../libraries/SafeMath.sol";
 import "../../interfaces/IERC20.sol";
 
+import "./interfaces/IFlashMinter.sol";
+
 // Lightweight token modelled after UNI-LP:
 // https://github.com/Uniswap/uniswap-v2-core/blob/v1.0.1/contracts/UniswapV2ERC20.sol
 // Adds:
@@ -12,15 +14,15 @@ import "../../interfaces/IERC20.sol";
 //   - ERC-3009 (`transferWithAuthorization()`)
 //   - flashMint() - allows to flashMint an arbitrary amount of FLASH, with the
 //     condition that it is burned before the end of the transaction.
-contract PoolERC20 is IERC20 {
+contract FlashToken is IERC20 {
     using SafeMath for uint256;
 
     // bytes32 private constant EIP712DOMAIN_HASH =
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 private constant EIP712DOMAIN_HASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
-    // bytes32 private constant NAME_HASH = keccak256("xFLASH")
-    bytes32 private constant NAME_HASH = 0xd1bc94b8dbef67492f84dfb0215d51bd6a08dc0e38a29061270f8f139b9d96b3;
+    // bytes32 private constant NAME_HASH = keccak256("FLASH")
+    bytes32 private constant NAME_HASH = 0x345b72c36b14f1cee01efb8ac4b299dc7b8d873e28b4796034548a3d371a4d2f;
 
     // bytes32 private constant VERSION_HASH = keccak256("1")
     bytes32 private constant VERSION_HASH = 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6;
@@ -31,16 +33,16 @@ contract PoolERC20 is IERC20 {
 
     // bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH =
     // keccak256("TransferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)");
-    bytes32
-        public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
+    bytes32 public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
 
-    string public constant name = "xALT Token";
-    string public constant symbol = "xALT";
+    string public constant name = "Flash Token";
+    string public constant symbol = "FLASH";
     uint8 public constant decimals = 18;
 
     uint256 public override totalSupply;
+    uint256 public flashSupply;
 
-    address public minter;
+    mapping(address => bool) public minters;
 
     mapping(address => uint256) public override balanceOf;
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -53,6 +55,16 @@ contract PoolERC20 is IERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce);
 
+    modifier onlyMinter {
+        require(minters[msg.sender] == true, "FlashToken:: NOT_MINTER");
+        _;
+    }
+
+    constructor(address flashProtocol, address flashClaim) public {
+        minters[flashProtocol] = true;
+        minters[flashClaim] = true;
+    }
+
     function _validateSignedData(
         address signer,
         bytes32 encodeData,
@@ -63,7 +75,7 @@ contract PoolERC20 is IERC20 {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), encodeData));
         address recoveredAddress = ecrecover(digest, v, r, s);
         // Explicitly disallow authorizations for address(0) as ecrecover returns address(0) on malformed messages
-        require(recoveredAddress != address(0) && recoveredAddress == signer, "xALTToken:: INVALID_SIGNATURE");
+        require(recoveredAddress != address(0) && recoveredAddress == signer, "FlashToken:: INVALID_SIGNATURE");
     }
 
     function _mint(address to, uint256 value) internal {
@@ -93,7 +105,8 @@ contract PoolERC20 is IERC20 {
         address to,
         uint256 value
     ) private {
-        require(to != address(0), "xALTToken:: RECEIVER_IS_TOKEN_OR_ZERO");
+        require(to != address(this) && to != address(0), "FlashToken:: RECEIVER_IS_TOKEN_OR_ZERO");
+
         // Balance is implicitly checked with SafeMath's underflow protection
         balanceOf[from] = balanceOf[from].sub(value);
         balanceOf[to] = balanceOf[to].add(value);
@@ -109,6 +122,11 @@ contract PoolERC20 is IERC20 {
 
     function getDomainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(EIP712DOMAIN_HASH, NAME_HASH, VERSION_HASH, getChainId(), address(this)));
+    }
+
+    function mint(address to, uint256 value) external onlyMinter returns (bool) {
+        _mint(to, value);
+        return true;
     }
 
     function burn(uint256 value) external override returns (bool) {
@@ -149,7 +167,7 @@ contract PoolERC20 is IERC20 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(deadline >= block.timestamp, "xALTToken:: AUTH_EXPIRED");
+        require(deadline >= block.timestamp, "FlashToken:: AUTH_EXPIRED");
 
         bytes32 encodeData = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner], deadline));
         nonces[owner] = nonces[owner].add(1);
@@ -169,18 +187,30 @@ contract PoolERC20 is IERC20 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(block.timestamp > validAfter, "xALTToken:: AUTH_NOT_YET_VALID");
-        require(block.timestamp < validBefore, "xALTToken:: AUTH_EXPIRED");
-        require(!authorizationState[from][nonce], "xALTToken:: AUTH_ALREADY_USED");
+        require(block.timestamp > validAfter, "FlashToken:: AUTH_NOT_YET_VALID");
+        require(block.timestamp < validBefore, "FlashToken:: AUTH_EXPIRED");
+        require(!authorizationState[from][nonce], "FlashToken:: AUTH_ALREADY_USED");
 
-        bytes32 encodeData = keccak256(
-            abi.encode(TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce)
-        );
+        bytes32 encodeData = keccak256(abi.encode(TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce));
         _validateSignedData(from, encodeData, v, r, s);
 
         authorizationState[from][nonce] = true;
         emit AuthorizationUsed(from, nonce);
 
         _transfer(from, to, value);
+    }
+
+    function flashMint(uint256 value, bytes calldata data) external {
+        flashSupply = flashSupply.add(value);
+        require(flashSupply <= type(uint112).max, "FlashToken:: SUPPLY_LIMIT_EXCEED");
+        balanceOf[msg.sender] = balanceOf[msg.sender].add(value);
+        emit Transfer(address(0), msg.sender, value);
+
+        IFlashMinter(msg.sender).executeOnFlashMint(data);
+
+        require(balanceOf[msg.sender] >= value, "FlashToken:: TRANSFER_EXCEED_BALANCE");
+        balanceOf[msg.sender] = balanceOf[msg.sender].sub(value);
+        flashSupply = flashSupply.sub(value);
+        emit Transfer(msg.sender, address(0), value);
     }
 }
