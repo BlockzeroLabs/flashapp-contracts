@@ -34,8 +34,8 @@ contract PoolERC20 is IERC20 {
     bytes32
         public constant TRANSFER_WITH_AUTHORIZATION_TYPEHASH = 0x7c7c6cdb67a18743f49ec6fa9b35f50d52ed05cbed4cc592e13b44501c1a2267;
 
-    string public constant name = "xALT Token";
-    string public constant symbol = "xALT";
+    string public constant name = "FLASH-ALT-LP Token";
+    string public constant symbol = "FLASH-ALT-LP";
     uint8 public constant decimals = 18;
 
     uint256 public override totalSupply;
