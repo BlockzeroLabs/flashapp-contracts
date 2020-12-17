@@ -63,7 +63,7 @@ contract PoolERC20 is IERC20 {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), encodeData));
         address recoveredAddress = ecrecover(digest, v, r, s);
         // Explicitly disallow authorizations for address(0) as ecrecover returns address(0) on malformed messages
-        require(recoveredAddress != address(0) && recoveredAddress == signer, "xALTToken:: INVALID_SIGNATURE");
+        require(recoveredAddress != address(0) && recoveredAddress == signer, "FLASH-ALT-LP Token:: INVALID_SIGNATURE");
     }
 
     function _mint(address to, uint256 value) internal {
@@ -93,7 +93,7 @@ contract PoolERC20 is IERC20 {
         address to,
         uint256 value
     ) private {
-        require(to != address(0), "xALTToken:: RECEIVER_IS_TOKEN_OR_ZERO");
+        require(to != address(0), "FLASH-ALT-LP Token:: RECEIVER_IS_TOKEN_OR_ZERO");
         // Balance is implicitly checked with SafeMath's underflow protection
         balanceOf[from] = balanceOf[from].sub(value);
         balanceOf[to] = balanceOf[to].add(value);
@@ -149,7 +149,7 @@ contract PoolERC20 is IERC20 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(deadline >= block.timestamp, "xALTToken:: AUTH_EXPIRED");
+        require(deadline >= block.timestamp, "FLASH-ALT-LP Token:: AUTH_EXPIRED");
 
         bytes32 encodeData = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner], deadline));
         nonces[owner] = nonces[owner].add(1);
@@ -169,9 +169,9 @@ contract PoolERC20 is IERC20 {
         bytes32 r,
         bytes32 s
     ) external {
-        require(block.timestamp > validAfter, "xALTToken:: AUTH_NOT_YET_VALID");
-        require(block.timestamp < validBefore, "xALTToken:: AUTH_EXPIRED");
-        require(!authorizationState[from][nonce], "xALTToken:: AUTH_ALREADY_USED");
+        require(block.timestamp > validAfter, "FLASH-ALT-LP Token:: AUTH_NOT_YET_VALID");
+        require(block.timestamp < validBefore, "FLASH-ALT-LP Token:: AUTH_EXPIRED");
+        require(!authorizationState[from][nonce], "FLASH-ALT-LP Token:: AUTH_ALREADY_USED");
 
         bytes32 encodeData = keccak256(
             abi.encode(TRANSFER_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce)
