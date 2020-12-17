@@ -19,8 +19,8 @@ contract PoolERC20 is IERC20 {
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 private constant EIP712DOMAIN_HASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
-    // bytes32 private constant NAME_HASH = keccak256("xFLASH")
-    bytes32 private constant NAME_HASH = 0xd1bc94b8dbef67492f84dfb0215d51bd6a08dc0e38a29061270f8f139b9d96b3;
+    // bytes32 private constant NAME_HASH = keccak256("FLASH-ALT-LP Token")
+    bytes32 private constant NAME_HASH = 0xfdde3a7807889787f51ab17062704a0d81341ba7debe5a9773b58a1b5e5f422c;
 
     // bytes32 private constant VERSION_HASH = keccak256("1")
     bytes32 private constant VERSION_HASH = 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6;
