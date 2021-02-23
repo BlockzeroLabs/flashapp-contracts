@@ -2,6 +2,7 @@
 pragma solidity 0.6.12;
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/IFlashToken.sol";
 import "./interfaces/IFlashReceiver.sol";
 import "./interfaces/IFlashReceiver.sol";
 import "./interfaces/IFlashProtocol.sol";
@@ -137,9 +138,9 @@ contract FlashApp is IFlashReceiver {
         uint256 _liquidity,
         address _token,
         uint256 _deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
     ) public {
         address maker = msg.sender;
 
@@ -149,7 +150,7 @@ contract FlashApp is IFlashReceiver {
 
         IFlashToken(FLASH_TOKEN).permit(maker, pool, type(uint256).max, _deadline, _v, _r, _s);
 
-        IFlashToken(FLASH_TOKEN).transferFrom(maker, pool, _liquidity);
+        IERC20(FLASH_TOKEN).transferFrom(maker, pool, _liquidity);
 
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
