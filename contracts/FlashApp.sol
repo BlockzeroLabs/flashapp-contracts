@@ -2,7 +2,6 @@
 pragma solidity 0.6.12;
 
 import "./interfaces/IERC20.sol";
-import "./interfaces/IFlashToken.sol";
 import "./interfaces/IFlashReceiver.sol";
 import "./interfaces/IFlashReceiver.sol";
 import "./interfaces/IFlashProtocol.sol";
@@ -148,9 +147,9 @@ contract FlashApp is IFlashReceiver {
 
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
 
-        IFlashToken(FLASH_TOKEN).permit(maker, pool, type(uint256).max, _deadline, _v, _r, _s);
+        IERC20(pool).permit(maker, pool, type(uint256).max, _deadline, _v, _r, _s);
 
-        IERC20(FLASH_TOKEN).transferFrom(maker, pool, _liquidity);
+        IERC20(pool).transferFrom(maker, pool, _liquidity);
 
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
