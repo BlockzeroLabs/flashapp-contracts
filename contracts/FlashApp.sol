@@ -15,8 +15,8 @@ import "./pool/contracts/Pool.sol";
 contract FlashApp is IFlashReceiver {
     using SafeMath for uint256;
 
-    address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
-    address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
+    address public constant FLASH_TOKEN = 0xB4467E8D621105312a914F1D42f10770C0Ffe3c8;
+    address public constant FLASH_PROTOCOL = 0xEc02f813404656E2A2AEd5BaeEd41D785324E8D0;
 
     mapping(bytes32 => uint256) public stakerReward;
     mapping(address => address) public pools; // token -> pools
@@ -107,13 +107,8 @@ contract FlashApp is IFlashReceiver {
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
         require(_amountFLASH > 0 && _amountALT > 0, "FlashApp:: INVALID_AMOUNT");
 
-        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) = IPool(pool).addLiquidity(
-            _amountFLASH,
-            _amountALT,
-            _amountFLASHMin,
-            _amountALTMin,
-            maker
-        );
+        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) =
+            IPool(pool).addLiquidity(_amountFLASH, _amountALT, _amountFLASHMin, _amountALTMin, maker);
 
         IERC20(FLASH_TOKEN).transferFrom(maker, address(this), amountFLASH);
         IERC20(FLASH_TOKEN).transfer(pool, amountFLASH);
@@ -132,6 +127,29 @@ contract FlashApp is IFlashReceiver {
 
         IERC20(pool).transferFrom(maker, address(this), _liquidity);
         IERC20(pool).transfer(pool, _liquidity);
+
+        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
+
+        emit LiquidityRemoved(pool, amountFLASH, amountALT, _liquidity, maker);
+    }
+
+    function removeLiquidityInPoolWithPermit(
+        uint256 _liquidity,
+        address _token,
+        uint256 _deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
+        address maker = msg.sender;
+
+        address pool = pools[_token];
+
+        require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
+
+        IFlashToken(FLASH_TOKEN).permit(maker, pool, type(uint256).max, _deadline, _v, _r, _s);
+
+        IFlashToken(FLASH_TOKEN).transferFrom(maker, pool, _liquidity);
 
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 

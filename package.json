@@ -75,5 +75,8 @@
     "test": "hardhat test",
     "typechain": "hardhat typechain",
     "deploy": "hardhat run ./scripts/deploy.ts"
+  },
+  "dependencies": {
+    "@zemse/solidity-flattener": "^1.5.1"
   }
 }

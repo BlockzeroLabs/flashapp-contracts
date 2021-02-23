@@ -23,7 +23,7 @@ contract PoolERC20 is IERC20 {
     bytes32 private constant NAME_HASH = 0xfdde3a7807889787f51ab17062704a0d81341ba7debe5a9773b58a1b5e5f422c;
 
     // bytes32 private constant VERSION_HASH = keccak256("1")
-    bytes32 private constant VERSION_HASH = 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6;
+    bytes32 private constant VERSION_HASH = 0xad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5;
 
     // bytes32 public constant PERMIT_TYPEHASH =
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");

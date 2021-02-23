@@ -1,16 +1,13 @@
 import { config as dotenvConfig } from "dotenv";
 import { resolve } from "path";
 dotenvConfig({ path: resolve(__dirname, "./.env") });
-
 import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 import "./tasks/accounts";
 import "./tasks/clean";
-
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-typechain";
 import "solidity-coverage";
-
 const chainIds = {
   ganache: 1337,
   goerli: 5,
@@ -20,7 +17,6 @@ const chainIds = {
   rinkeby: 4,
   ropsten: 3,
 };
-
 // Ensure that we have all the environment variables we need.
 let mnemonic: string;
 if (!process.env.MNEMONIC) {
@@ -28,14 +24,12 @@ if (!process.env.MNEMONIC) {
 } else {
   mnemonic = process.env.MNEMONIC;
 }
-
 let infuraApiKey: string;
 if (!process.env.INFURA_API_KEY) {
   throw new Error("Please set your INFURA_API_KEY in a .env file");
 } else {
   infuraApiKey = process.env.INFURA_API_KEY;
 }
-
 function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig {
   const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
   return {
@@ -49,17 +43,27 @@ function createTestnetConfig(network: keyof typeof chainIds): NetworkUserConfig 
     url,
   };
 }
-
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       chainId: chainIds.hardhat,
     },
+    ganache: {
+      chainId: chainIds.ganache,
+      url: "HTTP://127.0.0.1:7545",
+      accounts: {
+        count: 10,
+        initialIndex: 0,
+        mnemonic,
+        path: "m/44'/60'/0'/0",
+      },
+    },
     goerli: createTestnetConfig("goerli"),
     kovan: createTestnetConfig("kovan"),
     rinkeby: createTestnetConfig("rinkeby"),
     ropsten: createTestnetConfig("ropsten"),
+    mainnet: createTestnetConfig("mainnet"),
   },
   paths: {
     artifacts: "./artifacts",
