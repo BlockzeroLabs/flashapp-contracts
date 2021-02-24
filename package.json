@@ -76,6 +76,8 @@
     "deploy": "hardhat run ./scripts/deploy.ts"
   },
   "dependencies": {
-    "@zemse/solidity-flattener": "^1.5.1"
+    "@zemse/solidity-flattener": "^1.5.1",
+    "ethereumjs-util": "^7.0.8",
+    "ethereumjs-utils": "^5.2.5"
   }
 }

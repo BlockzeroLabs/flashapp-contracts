@@ -22,7 +22,8 @@ contract PoolERC20 is IERC20 {
     // bytes32 private constant NAME_HASH = keccak256("FLASH-ALT-LP Token")
     bytes32 private constant NAME_HASH = 0xfdde3a7807889787f51ab17062704a0d81341ba7debe5a9773b58a1b5e5f422c;
 
-    // bytes32 private constant VERSION_HASH = keccak256("1")
+ 
+    // bytes32 private constant VERSION_HASH = keccak256("2")
     bytes32 private constant VERSION_HASH = 0xad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5;
 
     // bytes32 public constant PERMIT_TYPEHASH =

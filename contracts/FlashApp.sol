@@ -15,8 +15,8 @@ import "./pool/contracts/Pool.sol";
 contract FlashApp is IFlashReceiver {
     using SafeMath for uint256;
 
-    address public constant FLASH_TOKEN = 0xB4467E8D621105312a914F1D42f10770C0Ffe3c8;
-    address public constant FLASH_PROTOCOL = 0xEc02f813404656E2A2AEd5BaeEd41D785324E8D0;
+    address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
+    address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
 
     mapping(bytes32 => uint256) public stakerReward;
     mapping(address => address) public pools; // token -> pools
