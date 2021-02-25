@@ -11,16 +11,49 @@ contract ALTToken is IERC20 {
     string public constant symbol = "ALT";
     uint8 public constant decimals = 18;
 
+    bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+
+    bytes32 private constant EIP712DOMAIN_HASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
+
+    bytes32 private constant NAME_HASH = 0xfdde3a7807889787f51ab17062704a0d81341ba7debe5a9773b58a1b5e5f422c;
+
+    bytes32 private constant VERSION_HASH = 0xad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5;
+
     uint256 public override totalSupply = 1000000;
 
     mapping(address => uint256) public override balanceOf;
     mapping(address => mapping(address => uint256)) public override allowance;
+    mapping(address => uint256) public nonces;
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     constructor() public {
         balanceOf[msg.sender] = totalSupply.mul(10**18);
+    }
+
+    function _validateSignedData(
+        address signer,
+        bytes32 encodeData,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal view {
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), encodeData));
+        address recoveredAddress = ecrecover(digest, v, r, s);
+        // Explicitly disallow authorizations for address(0) as ecrecover returns address(0) on malformed messages
+        require(recoveredAddress != address(0) && recoveredAddress == signer, "FLASH-ALT-LP Token:: INVALID_SIGNATURE");
+    }
+
+    function getChainId() public pure returns (uint256 chainId) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            chainId := chainid()
+        }
+    }
+
+    function getDomainSeparator() public view returns (bytes32) {
+        return keccak256(abi.encode(EIP712DOMAIN_HASH, NAME_HASH, VERSION_HASH, getChainId(), address(this)));
     }
 
     function _approve(
@@ -79,5 +112,23 @@ contract ALTToken is IERC20 {
         }
         _transfer(from, to, value);
         return true;
+    }
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override {
+        require(deadline >= block.timestamp, "FLASH-ALT-LP Token:: AUTH_EXPIRED");
+
+        bytes32 encodeData = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner], deadline));
+        nonces[owner] = nonces[owner].add(1);
+        _validateSignedData(owner, encodeData, v, r, s);
+
+        _approve(owner, spender, value);
     }
 }

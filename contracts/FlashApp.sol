@@ -107,13 +107,8 @@ contract FlashApp is IFlashReceiver {
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
         require(_amountFLASH > 0 && _amountALT > 0, "FlashApp:: INVALID_AMOUNT");
 
-        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) = IPool(pool).addLiquidity(
-            _amountFLASH,
-            _amountALT,
-            _amountFLASHMin,
-            _amountALTMin,
-            maker
-        );
+        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) =
+            IPool(pool).addLiquidity(_amountFLASH, _amountALT, _amountFLASHMin, _amountALTMin, maker);
 
         IERC20(FLASH_TOKEN).transferFrom(maker, address(this), amountFLASH);
         IERC20(FLASH_TOKEN).transfer(pool, amountFLASH);
@@ -132,6 +127,29 @@ contract FlashApp is IFlashReceiver {
 
         IERC20(pool).transferFrom(maker, address(this), _liquidity);
         IERC20(pool).transfer(pool, _liquidity);
+
+        (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
+
+        emit LiquidityRemoved(pool, amountFLASH, amountALT, _liquidity, maker);
+    }
+
+    function removeLiquidityInPoolWithPermit(
+        uint256 _liquidity,
+        address _token,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) public {
+        address maker = msg.sender;
+
+        address pool = pools[_token];
+
+        require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
+
+        IERC20(pool).permit(maker, pool, type(uint256).max, _deadline, _v, _r, _s);
+
+        IERC20(pool).transferFrom(maker, pool, _liquidity);
 
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 

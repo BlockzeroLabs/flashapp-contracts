@@ -5,6 +5,14 @@ import FlashAppArtifact from "../artifacts/contracts/FlashApp.sol/FlashApp.json"
 import { constants, ContractFactory, ethers, utils, Contract } from "ethers";
 import { predictFlashTokenAddress, predictFlashProtocolAddress } from './utils/utils'
 import { deployFlashToken, deployFlashProtocol, deployAltToken } from './fixtures/fixtures'
+import { ecsign } from "ethereumjs-util";
+import {
+    defaultAbiCoder,
+    hexlify,
+    keccak256,
+    toUtf8Bytes,
+    solidityPack
+} from "ethers/lib/utils";
 
 use(solidity);
 
@@ -29,13 +37,17 @@ describe("Flash App", async () => {
 
     let AltToken: Contract;
 
-    let id:string;
+    let id: string;
 
     it('setup contracts', async () => {
 
         let FlashTokenAddress: string = await predictFlashTokenAddress(wallet);
 
+        console.log(FlashTokenAddress)
+
         let FlashProtocolAddress: string = await predictFlashProtocolAddress(walletTo);
+
+        console.log(FlashProtocolAddress)
 
         const loadFixture = createFixtureLoader([wallet, walletTo], provider)
 
@@ -117,11 +129,11 @@ describe("Flash App", async () => {
 
     it('unstake', async () => {
         setTimeout(async () => {
-          await expect(
-            FlashApp.unstake([id])
-          ).to.emit(FlashProtocol, "Unstaked");
+            await expect(
+                FlashApp.unstake([id])
+            ).to.emit(FlashProtocol, "Unstaked");
         }, 3000)
-      })
+    })
 
     it('swap', async () => {
         await expect(FlashApp.swap("100000000000000000", AltToken.address, "0")).to.emit(FlashApp, "Swapped")
@@ -132,7 +144,56 @@ describe("Flash App", async () => {
         let PoolContract: Contract = await PoolFactory.connect(poolAddress, provider);
         let contract = await PoolContract.connect(wallet);
         await contract.approve(FlashApp.address, constants.MaxUint256);
-        await expect(FlashApp.removeLiquidityInPool((await contract.balanceOf(wallet.address)).toString(), AltToken.address)).to.emit(FlashApp, "LiquidityRemoved");
+        await expect(FlashApp.removeLiquidityInPool((Number((await contract.balanceOf(wallet.address)).toString()) / 2).toString(), AltToken.address)).to.emit(FlashApp, "LiquidityRemoved");
     })
 
-});
+    it('remove liquidity with permit', async () => {
+
+        let poolAddress: string = await FlashApp.pools(AltToken.address);
+        let PoolContract: Contract = await PoolFactory.connect(poolAddress, provider);
+        let contract = await PoolContract.connect(wallet);
+
+
+        const deadline: any = "1714161515"
+        const nonces = await PoolContract.nonces(wallet.address);
+
+        const encodeData: any = keccak256(
+            defaultAbiCoder.encode(
+                ["bytes32", "address", "address", "uint256", "uint256", "uint256"],
+                [
+                    await PoolContract.PERMIT_TYPEHASH(),
+                    wallet.address,
+                    poolAddress,
+                    constants.MaxUint256,
+                    nonces,
+                    deadline,
+                ]
+            )
+        );
+
+        const digest: any = keccak256(
+            solidityPack(
+                ["bytes1", "bytes1", "bytes32", "bytes32"],
+                ["0x19", "0x01", , await PoolContract.getDomainSeparator(), encodeData]
+            )
+        );
+
+        const { v, r, s } = ecsign(
+            Buffer.from(digest.slice(2), "hex"),
+            Buffer.from(wallet.privateKey.slice(2), "hex")
+        );
+
+        // uint256 _liquidity,
+        // address _token,
+        // uint256 _deadline,
+        // uint8 _v,
+        // bytes32 _r,
+        // bytes32 _s
+
+
+
+        await expect(FlashApp.removeLiquidityInPoolWithPermit((await contract.balanceOf(wallet.address)).toString(), AltToken.address, deadline, v, r, s)).to.emit(FlashApp, "LiquidityRemoved");
+    })
+
+})
+
