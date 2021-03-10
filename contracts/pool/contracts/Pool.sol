@@ -15,8 +15,8 @@ contract Pool is PoolERC20, IPool {
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
-    address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
-    address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
+    address public constant FLASH_TOKEN = 0x81224010f2eF1f951439f9816f05E1e62b9e45Df;
+    address public constant FLASH_PROTOCOL = 0xEe3F542B127fFE3bb1AEeee4B09e2E8d51C6E6A3;
 
     uint256 public reserveFlashAmount;
     uint256 public reserveAltAmount;
