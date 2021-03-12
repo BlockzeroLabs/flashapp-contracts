@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.7.4;
 
 import "../../libraries/SafeMath.sol";
 import "../../interfaces/IERC20.sol";
@@ -28,7 +28,7 @@ contract ALTToken is IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    constructor() public {
+    constructor() {
         balanceOf[msg.sender] = totalSupply.mul(10**18);
     }
 

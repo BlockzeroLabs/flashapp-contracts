@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.7.4;
 
 import "./interfaces/IFlashToken.sol";
 import "../../interfaces/IFlashReceiver.sol";
@@ -60,7 +60,7 @@ contract FlashProtocol is IFlashProtocol {
         _;
     }
 
-    constructor(address _initialMatchReceiver) public {
+    constructor(address _initialMatchReceiver) {
         _setMatchReceiver(_initialMatchReceiver);
     }
 
@@ -169,19 +169,19 @@ contract FlashProtocol is IFlashProtocol {
         emit Unstaked(_id, s.amountIn, staker);
     }
 
-    function getMatchedAmount(uint256 _mintedAmount) public override view returns (uint256) {
+    function getMatchedAmount(uint256 _mintedAmount) public view override returns (uint256) {
         return _mintedAmount.mul(matchRatio).div(10000);
     }
 
-    function getMintAmount(uint256 _amountIn, uint256 _expiry) public override view returns (uint256) {
+    function getMintAmount(uint256 _amountIn, uint256 _expiry) public view override returns (uint256) {
         return _amountIn.mul(_expiry).mul(getFPY(_amountIn)).div(PRECISION * SECONDS_IN_1_YEAR);
     }
 
-    function getFPY(uint256 _amountIn) public override view returns (uint256) {
+    function getFPY(uint256 _amountIn) public view override returns (uint256) {
         return (PRECISION.sub(getPercentageStaked(_amountIn))).div(2);
     }
 
-    function getPercentageStaked(uint256 _amountIn) public override view returns (uint256 percentage) {
+    function getPercentageStaked(uint256 _amountIn) public view override returns (uint256 percentage) {
         uint256 locked = IFlashToken(FLASH_TOKEN).balanceOf(address(this)).add(_amountIn);
         percentage = locked.mul(PRECISION).div(IFlashToken(FLASH_TOKEN).totalSupply());
     }
@@ -194,11 +194,11 @@ contract FlashProtocol is IFlashProtocol {
         burnAmount = _amount.mul(_remainingTime).mul(getInvFPY(_amount)).div(_totalTime.mul(PRECISION));
     }
 
-    function getInvFPY(uint256 _amount) public override view returns (uint256) {
+    function getInvFPY(uint256 _amount) public view override returns (uint256) {
         return PRECISION.sub(getPercentageUnStaked(_amount));
     }
 
-    function getPercentageUnStaked(uint256 _amount) public override view returns (uint256 percentage) {
+    function getPercentageUnStaked(uint256 _amount) public view override returns (uint256 percentage) {
         uint256 locked = IFlashToken(FLASH_TOKEN).balanceOf(address(this)).sub(_amount);
         percentage = locked.mul(PRECISION).div(IFlashToken(FLASH_TOKEN).totalSupply());
     }
