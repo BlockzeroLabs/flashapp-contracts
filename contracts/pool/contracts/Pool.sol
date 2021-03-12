@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.7.4;
 
 import "../../libraries/SafeMath.sol";
+import "../../libraries/SafeERC20.sol";
 
 import "../../interfaces/IERC20.sol";
 import "../../interfaces/IFlashProtocol.sol";
@@ -11,9 +12,9 @@ import "./PoolERC20.sol";
 
 contract Pool is PoolERC20, IPool {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     uint256 public constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256(bytes("transfer(address,uint256)")));
 
     address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
     address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
@@ -37,17 +38,8 @@ contract Pool is PoolERC20, IPool {
         _;
     }
 
-    constructor() public {
+    constructor() {
         factory = msg.sender;
-    }
-
-    function _safeTransfer(
-        address _token,
-        address _to,
-        uint256 _value
-    ) private {
-        (bool success, bytes memory data) = _token.call(abi.encodeWithSelector(TRANSFER_SELECTOR, _to, _value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), "Pool:: TRANSFER_FAILED");
     }
 
     function initialize(address _token) public override onlyFactory {
@@ -62,7 +54,7 @@ contract Pool is PoolERC20, IPool {
         result = getAPYSwap(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveSwap(_amountIn, result);
-        _safeTransfer(FLASH_TOKEN, _staker, result);
+        IERC20(FLASH_TOKEN).safeTransfer(_staker, result);
     }
 
     function stakeWithFeeRewardDistribution(
@@ -73,7 +65,7 @@ contract Pool is PoolERC20, IPool {
         result = getAPYStake(_amountIn);
         require(_expectedOutput <= result, "Pool:: EXPECTED_IS_GREATER");
         calcNewReserveStake(_amountIn, result);
-        _safeTransfer(token, _staker, result);
+        IERC20(token).safeTransfer(_staker, result);
     }
 
     function addLiquidity(
@@ -147,8 +139,8 @@ contract Pool is PoolERC20, IPool {
 
         _burn(address(this), liquidity);
 
-        _safeTransfer(FLASH_TOKEN, to, amountFLASH);
-        _safeTransfer(token, to, amountALT);
+        IERC20(FLASH_TOKEN).safeTransfer(to, amountFLASH);
+        IERC20(token).safeTransfer(to, amountALT);
 
         balanceFLASH = balanceFLASH.sub(IERC20(FLASH_TOKEN).balanceOf(address(this)));
         balanceALT = balanceALT.sub(IERC20(token).balanceOf(address(this)));
