@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.7.4;
 
 import "./interfaces/IERC20.sol";
 import "./interfaces/IFlashReceiver.sol";
@@ -9,11 +9,13 @@ import "./interfaces/IFlashProtocol.sol";
 import "./libraries/SafeMath.sol";
 import "./libraries/Address.sol";
 import "./libraries/Create2.sol";
+import "./libraries/SafeERC20.sol";
 
 import "./pool/contracts/Pool.sol";
 
 contract FlashApp is IFlashReceiver {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     address public constant FLASH_TOKEN = 0xA193E42526F1FEA8C99AF609dcEabf30C1c29fAA;
     address public constant FLASH_PROTOCOL = 0x54421e7a0325cCbf6b8F3A28F9c176C77343b7db;
@@ -63,7 +65,7 @@ contract FlashApp is IFlashReceiver {
     ) external override onlyProtocol returns (uint256) {
         (address token, uint256 expectedOutput) = abi.decode(_data, (address, uint256));
         address pool = pools[token];
-        IERC20(FLASH_TOKEN).transfer(pool, _mintedAmount);
+        IERC20(FLASH_TOKEN).safeTransfer(pool, _mintedAmount);
         uint256 reward = IPool(pool).stakeWithFeeRewardDistribution(_mintedAmount, _staker, expectedOutput);
         stakerReward[_id] = reward;
         emit Staked(_id, reward, pool);
@@ -86,8 +88,8 @@ contract FlashApp is IFlashReceiver {
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
         require(_altQuantity > 0, "FlashApp:: INVALID_AMOUNT");
 
-        IERC20(_token).transferFrom(user, address(this), _altQuantity);
-        IERC20(_token).transfer(pool, _altQuantity);
+        IERC20(_token).safeTransferFrom(user, address(this), _altQuantity);
+        IERC20(_token).safeTransfer(pool, _altQuantity);
 
         result = IPool(pool).swapWithFeeRewardDistribution(_altQuantity, user, _expectedOutput);
 
@@ -107,13 +109,19 @@ contract FlashApp is IFlashReceiver {
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
         require(_amountFLASH > 0 && _amountALT > 0, "FlashApp:: INVALID_AMOUNT");
 
-        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) =
-            IPool(pool).addLiquidity(_amountFLASH, _amountALT, _amountFLASHMin, _amountALTMin, maker);
+        (uint256 amountFLASH, uint256 amountALT, uint256 liquidity) = IPool(pool).addLiquidity(
+            _amountFLASH,
+            _amountALT,
+            _amountFLASHMin,
+            _amountALTMin,
+            maker
+        );
 
-        IERC20(FLASH_TOKEN).transferFrom(maker, address(this), amountFLASH);
-        IERC20(FLASH_TOKEN).transfer(pool, amountFLASH);
-        IERC20(_token).transferFrom(maker, address(this), amountALT);
-        IERC20(_token).transfer(pool, amountALT);
+        IERC20(FLASH_TOKEN).safeTransferFrom(maker, address(this), amountFLASH);
+        IERC20(FLASH_TOKEN).safeTransfer(pool, amountFLASH);
+
+        IERC20(_token).safeTransferFrom(maker, address(this), amountALT);
+        IERC20(_token).safeTransfer(pool, amountALT);
 
         emit LiquidityAdded(pool, amountFLASH, amountALT, liquidity, maker);
     }
@@ -125,8 +133,8 @@ contract FlashApp is IFlashReceiver {
 
         require(pool != address(0), "FlashApp:: POOL_DOESNT_EXIST");
 
-        IERC20(pool).transferFrom(maker, address(this), _liquidity);
-        IERC20(pool).transfer(pool, _liquidity);
+        IERC20(pool).safeTransferFrom(maker, address(this), _liquidity);
+        IERC20(pool).safeTransfer(pool, _liquidity);
 
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
@@ -149,7 +157,7 @@ contract FlashApp is IFlashReceiver {
 
         IERC20(pool).permit(maker, pool, type(uint256).max, _deadline, _v, _r, _s);
 
-        IERC20(pool).transferFrom(maker, pool, _liquidity);
+        IERC20(pool).safeTransferFrom(maker, pool, _liquidity);
 
         (uint256 amountFLASH, uint256 amountALT) = IPool(pool).removeLiquidity(maker);
 
